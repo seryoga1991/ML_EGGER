@@ -14,9 +14,6 @@ import sys
 
 
 def main():
-    manager = multiprocessing.Manager()
-    shared_list = manager.list()
-    lock = manager.Lock()
     wl = data_loader.load_all_wordlists()
     sd = data_loader.SapData(
         data_loader.path_to_sap_data, data_loader.tangro_om, wl, 0.8)
