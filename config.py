@@ -11,7 +11,9 @@ tangro_preproc = {"tangro_om": [
     ["ORDER_ITEMS_OUT", "SHORT_TEXT"],
     ["ORDER_PARTNERS_OUT", "UNLOAD_PT"]]
 }
-
+name_appendix = ''
+temporary_save_dir = 'C:\\Users\\agoyy\\OneDrive\\Desktop\\temp\\'
+save_dir = 'C:\\Users\\agoyy\\OneDrive\\Desktop\\DATA\\'
 # tangro OM spezifische Konfiguration
 tangro_om = 'tangro_om'
 sd_headers = 'ORDER_HEADERS_OUT.csv'
