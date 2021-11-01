@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
 from custom_transformer import hot_encode
-
-
+import csv
+import os 
+from config import *
 def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> ([int], [np.ndarray]):
     filtered_wl = wordlist.drop_duplicates(subset=['DOC_NUMBER'])
     if len(filtered_wl.index) == 2:
@@ -28,30 +29,23 @@ def correlate(vec: ([int], [np.ndarray])):
     return  ((vec1[0],vec2[0]),normalized_difference) """
 
 
-def correlate_docs(wordlist: pd.DataFrame, total_doc_range: pd.Series, shared_list=None, lock=None, partial_doc_range: pd.Series = None) -> [((int, int), np.float64)]:
-    tuples_list = []
-    domain = []
-    docs = total_doc_range.copy()
-    docs_count = len(docs)
-    if partial_doc_range is None:
-        docs_to_correlate = total_doc_range.copy()
-    else:
-        docs_to_correlate = partial_doc_range.copy()
-
-    for idx, i in enumerate(docs):
-        liste = [pd.concat([wordlist[wordlist['DOC_NUMBER'] == i],
-                            wordlist[wordlist['DOC_NUMBER'] == j]], ignore_index=True) for j in docs_to_correlate if [j, i] not in shared_list]
-        correlation_list = [correlate(aggregate_by_docno(
-            concat_wl, hot_encode(concat_wl))) for concat_wl in liste]
-        if shared_list is not None:
-            with lock:
-                shared_list.extend([[x[0], x[1]] for x in correlation_list])
-        else:
-            domain.extend([[x[0], x[1]] for x in correlation_list])
-        tuples_list.extend(correlation_list)
-        percentage = idx/docs_count
-        print(percentage)
-    return tuples_list
+def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> [((int, int), np.float64)]:
+    for count in range(2):
+        docs = doc_range[2*count + 1].copy()
+        docs_count = len(docs)
+        docs_to_correlate = doc_range[2*count].copy()
+        if not docs.empty:
+            with open(os.path.join(temporary_save_dir,f'data_{name_appendix}_{docs_count}.csv') ,'a+',newline='') as test_file:
+                file_writer = csv.writer(test_file, delimiter = ',' )
+                file_writer.writerow(['DOC1','DOC2','Distance'])
+                for idx, i in enumerate(docs):
+                    for j in docs_to_correlate:
+                        concat_wl = pd.concat([wordlist[wordlist['DOC_NUMBER'] == i], wordlist[wordlist['DOC_NUMBER'] == j]], ignore_index=True)
+                        two_doc_corr = correlate(aggregate_by_docno(
+                            concat_wl, hot_encode(concat_wl))) 
+                        file_writer.writerow([x for x in two_doc_corr])
+            
+               
 
 
 """ def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series) -> [((int,int),np.float64)]:
