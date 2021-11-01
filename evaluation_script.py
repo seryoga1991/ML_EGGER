@@ -37,6 +37,7 @@ def main():
             all_files = glob.glob(os.path.join(temporary_save_dir, "*.csv"))
             total_file = pandas.concat((pandas.read_csv(f, engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE) for f in all_files))
             total_file.to_csv(os.path.join(save_dir,f'data_{name_appendix}.csv'))
+            
             for f in all_files:
                 os.remove(f)
     

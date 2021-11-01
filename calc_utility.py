@@ -38,6 +38,7 @@ def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> [((in
             with open(os.path.join(temporary_save_dir,f'data_{name_appendix}_{docs_count}.csv') ,'a+',newline='') as test_file:
                 file_writer = csv.writer(test_file, delimiter = ',' )
                 file_writer.writerow(['DOC1','DOC2','Distance'])
+                
                 for idx, i in enumerate(docs):
                     for j in docs_to_correlate:
                         concat_wl = pd.concat([wordlist[wordlist['DOC_NUMBER'] == i], wordlist[wordlist['DOC_NUMBER'] == j]], ignore_index=True)
