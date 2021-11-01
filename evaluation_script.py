@@ -16,7 +16,7 @@ import sys
 def main():
     wl = data_loader.load_all_wordlists()
     sd = data_loader.SapData(
-        data_loader.path_to_sap_data, data_loader.tangro_om, wl, 0.8)
+        data_loader.path_to_sap_data, data_loader.tangro_om, wl, 0.7)
     ag_counts = sd.__train_dict['headers']['SOLD_TO'].value_counts()
     mat_counts = sd.__train_dict['items']['MATERIAL'].value_counts()
     filter_list = [[
@@ -30,7 +30,7 @@ def main():
             filtered_wl = filtered_wl[filtered_wl['ATTACH_NO'] == '1']
             series = filtered_sets['headers']['DOC_NUMBER']
 
-            if len(series) > 3 * cores_to_use:
+            if len(series) >  cores_to_use:
                 print(len(series))
                 frozen_wl_correlator = functools.partial(
                     calc_utility.correlate_docs, filtered_wl)
@@ -38,7 +38,7 @@ def main():
                     series, cores_to_use)
                 with concurrent.futures.ProcessPoolExecutor(max_workers=cores_to_use) as executor:
                     executor.map(frozen_wl_correlator, sliced_series_list)
-            elif len(series) <= cores_to_use * 3 and len(series) > 1:
+            elif len(series) <= cores_to_use  and len(series) > 1:
                 frozen_wl_correlator = functools.partial(
                     calc_utility.correlate_docs_single_thread, filtered_wl)
                 frozen_wl_correlator(series)

@@ -17,30 +17,27 @@ def equipartition(series: pd.Series, parts_count: int) -> [pd.Series]:
     remainder = len(series) % parts_count
     slice_size = int((len(series) - remainder)/parts_count)
     sliced_series_list = [[series[slice_size*i:slice_size *
-                                  i + slice_size], series[slice_size*i:]]for i in range(parts_count - 1)]
+                                    i + slice_size], series[slice_size*i:]]for i in range(parts_count - 1)]
     sliced_series_list.append(
-        [series[slice_size*(parts_count - 1):], series[slice_size*(parts_count - 1):]])
-    temp_count = int(2 * parts_count)
-    remainder = len(series) % temp_count
-    slice_size = int((len(series) - remainder)/temp_count)
-    temp_series = [[series[slice_size*i:slice_size *
-                           i + slice_size], series[slice_size*i:]]for i in range(temp_count - 1)]
-    temp_series.append([series[slice_size*(temp_count - 1):],
-                        series[slice_size*(temp_count - 1):]])
-    for j in range(int(parts_count/2)):
-        reverse_idx = int(parts_count - 1 - j)
-        if j >= int(parts_count/2 - 2):
-            sliced_series_list[j] = [
-                *sliced_series_list[j], pd.Series([]), pd.Series([])]
-            sliced_series_list[reverse_idx] = [
-                *sliced_series_list[reverse_idx], pd.Series([]), pd.Series([])]
+        [series[slice_size*(parts_count - 1):], series[slice_size*(parts_count - 1):],pd.Series([]),pd.Series([])])
+    mean_val = len(sliced_series_list[int(parts_count/2 - 1)][1])
+    for j in range(int(parts_count/2 )):
+        reduced_series_len = len(series)- j * slice_size
+        equi_load_step = int(slice_size*( reduced_series_len - mean_val - 1)/reduced_series_len)
+        diff_step = int(slice_size - equi_load_step)
+        reverse_idx = int(parts_count - 2 - j) 
+        if j < (parts_count/2 - 1):
+            sliced_series_list[j]=[series[j*slice_size:j*slice_size + diff_step],
+                                series[slice_size*j:],
+                                pd.Series([]),
+                                pd.Series([])]   
+            sliced_series_list[reverse_idx] = [*sliced_series_list[reverse_idx],
+                                    series[j*slice_size + diff_step : j*slice_size + slice_size],
+                                    sliced_series_list[j][1][j*slice_size +diff_step:]]
         else:
-            sliced_series_list[j] = [
-                *temp_series[2*j], pd.Series([]), pd.Series([])]
-            sliced_series_list[reverse_idx] = [
-                *sliced_series_list[reverse_idx], temp_series[2*j + 1][0], temp_series[2*j + 1][1]]
+            sliced_series_list[j] = [*sliced_series_list[j],pd.Series([]),pd.Series([])]
+    
     return sliced_series_list
-
 
 def swap_header_by_row(dataset, row=0):
     dataset_new = dataset.copy()
@@ -57,15 +54,6 @@ def split_train_test_by_id(data, test_ratio, id_column):
     ids = data[id_column]
     in_test_set = ids.apply(lambda id_: test_set_check(id_, test_ratio))
     return data.loc[~in_test_set], data.loc[in_test_set]
-
-
-""" def create_dict_from_trained_sets(object):
-    trainedSet_dict = {}
-    for attr in dir(object):
-        if attr.startswith('train_') and not callable(getattr(object, attr)):
-            new_name = attr[6:]
-            trainedSet_dict[new_name] = getattr(object, attr)
-    return trainedSet_dict """
 
 
 def filter_sdDicts(object, filter_set, filter_column, filter_value, wordlist=None):
