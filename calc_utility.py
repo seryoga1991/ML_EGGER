@@ -2,8 +2,11 @@ import pandas as pd
 import numpy as np
 from custom_transformer import hot_encode
 import csv
-import os 
+import os
+from math import sqrt
 from config import *
+
+
 def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> ([int], [np.ndarray]):
     filtered_wl = wordlist.drop_duplicates(subset=['DOC_NUMBER'])
     if len(filtered_wl.index) == 2:
@@ -20,7 +23,8 @@ def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> ([
 
 
 def correlate(vec: ([int], [np.ndarray])):
-    normalized_difference = np.linalg.norm(vec[1][0]-vec[1][1])
+    normalized_difference = np.linalg.norm(
+        vec[1][0]-vec[1][1])/sqrt(len(vec[1][0]))
     return [vec[0][0], vec[0][1], normalized_difference]
 
 
@@ -35,18 +39,34 @@ def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> [((in
         docs_count = len(docs)
         docs_to_correlate = doc_range[2*count].copy()
         if not docs.empty:
-            with open(os.path.join(temporary_save_dir,f'data_{name_appendix}_{docs_count}.csv') ,'a+',newline='') as test_file:
-                file_writer = csv.writer(test_file, delimiter = ',' )
-                file_writer.writerow(['DOC1','DOC2','Distance'])
-                
+            with open(os.path.join(temporary_save_dir, f'data_{name_appendix}_{docs_count}.csv'), 'a+', newline='') as test_file:
+                file_writer = csv.writer(test_file, delimiter=',')
+                file_writer.writerow(['DOC1', 'DOC2', 'Distance'])
+
                 for idx, i in enumerate(docs):
                     for j in docs_to_correlate:
-                        concat_wl = pd.concat([wordlist[wordlist['DOC_NUMBER'] == i], wordlist[wordlist['DOC_NUMBER'] == j]], ignore_index=True)
+                        concat_wl = pd.concat(
+                            [wordlist[wordlist['DOC_NUMBER'] == i], wordlist[wordlist['DOC_NUMBER'] == j]], ignore_index=True)
                         two_doc_corr = correlate(aggregate_by_docno(
-                            concat_wl, hot_encode(concat_wl))) 
+                            concat_wl, hot_encode(concat_wl)))
                         file_writer.writerow([x for x in two_doc_corr])
-            
-               
+
+
+def correlate_docs_single_thread(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> [((int, int), np.float64)]:
+    docs = doc_range.copy()
+    docs_count = len(docs)
+    if not docs.empty:
+        with open(os.path.join(temporary_save_dir, f'data_{name_appendix}_{docs_count}.csv'), 'a+', newline='') as test_file:
+            file_writer = csv.writer(test_file, delimiter=',')
+            file_writer.writerow(['DOC1', 'DOC2', 'Distance'])
+            for idx, i in enumerate(docs):
+                for j in docs:
+                    concat_wl = pd.concat(
+                        [wordlist[wordlist['DOC_NUMBER'] == i], wordlist[wordlist['DOC_NUMBER'] == j]], ignore_index=True)
+                    two_doc_corr = correlate(aggregate_by_docno(
+                        concat_wl, hot_encode(concat_wl)))
+                    file_writer.writerow([x for x in two_doc_corr])
+                docs = docs.drop(docs == i)
 
 
 """ def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series) -> [((int,int),np.float64)]:
@@ -67,7 +87,3 @@ def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> [((in
 
         print(len(symmetrical_indices)/len(docs))
     return tuples_list   """
-
-
-
-       

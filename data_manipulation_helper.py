@@ -13,29 +13,34 @@ def transpose_list(liste):
 
 
 def equipartition(series: pd.Series, parts_count: int) -> [pd.Series]:
-    
+
     remainder = len(series) % parts_count
     slice_size = int((len(series) - remainder)/parts_count)
     sliced_series_list = [[series[slice_size*i:slice_size *
-                                 i + slice_size], series[slice_size*i:] ]for i in range(parts_count - 1)]
-    sliced_series_list.append([series[slice_size*(parts_count - 1):],series[slice_size*(parts_count - 1):]])
+                                  i + slice_size], series[slice_size*i:]]for i in range(parts_count - 1)]
+    sliced_series_list.append(
+        [series[slice_size*(parts_count - 1):], series[slice_size*(parts_count - 1):]])
     temp_count = int(2 * parts_count)
     remainder = len(series) % temp_count
     slice_size = int((len(series) - remainder)/temp_count)
     temp_series = [[series[slice_size*i:slice_size *
-                                 i + slice_size], series[slice_size*i:] ]for i in range(temp_count - 1)]
-    temp_series.append([series[slice_size*(temp_count - 1):],series[slice_size*(temp_count - 1):]])
+                           i + slice_size], series[slice_size*i:]]for i in range(temp_count - 1)]
+    temp_series.append([series[slice_size*(temp_count - 1):],
+                        series[slice_size*(temp_count - 1):]])
     for j in range(int(parts_count/2)):
         reverse_idx = int(parts_count - 1 - j)
-        if j >= int(parts_count/2 - 2) :
-            sliced_series_list[j] = [*sliced_series_list[j],pd.Series([]),pd.Series([])]
-            sliced_series_list[reverse_idx] = [*sliced_series_list[reverse_idx],pd.Series([]),pd.Series([])]
+        if j >= int(parts_count/2 - 2):
+            sliced_series_list[j] = [
+                *sliced_series_list[j], pd.Series([]), pd.Series([])]
+            sliced_series_list[reverse_idx] = [
+                *sliced_series_list[reverse_idx], pd.Series([]), pd.Series([])]
         else:
-            sliced_series_list[j] = [*temp_series[2*j],pd.Series([]),pd.Series([])]
-            sliced_series_list[reverse_idx] = [*sliced_series_list[reverse_idx],temp_series[2*j + 1][0],temp_series[2*j + 1][1]]
+            sliced_series_list[j] = [
+                *temp_series[2*j], pd.Series([]), pd.Series([])]
+            sliced_series_list[reverse_idx] = [
+                *sliced_series_list[reverse_idx], temp_series[2*j + 1][0], temp_series[2*j + 1][1]]
     return sliced_series_list
 
-#,temp_series[2*j + 1][0],temp_series[2*j + 1][1]
 
 def swap_header_by_row(dataset, row=0):
     dataset_new = dataset.copy()
