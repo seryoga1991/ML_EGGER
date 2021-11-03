@@ -24,8 +24,7 @@ def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> ([
 
 
 def correlate(vec: ([int], [np.ndarray])):
-    normalized_difference = np.linalg.norm(
-        vec[1][0]-vec[1][1])
+    normalized_difference = np.linalg.norm((vec[1][0]-vec[1][1]),1)/len(vec[1][1])
     return [vec[0][0], vec[0][1], normalized_difference]
 
 
