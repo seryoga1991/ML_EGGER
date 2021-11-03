@@ -15,7 +15,6 @@ def preproc_sap_data(path_to_file, tangro_modul):
         return file
     except OSError as err:
         print("Ungültiger Pfad.")
-    return file
 
 
 def findOccurrences(s, ch):
