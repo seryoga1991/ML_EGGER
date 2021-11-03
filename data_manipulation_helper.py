@@ -21,24 +21,25 @@ def binomial_equipartition(series: pd.Series, parts_count: int) -> [pd.Series]:
     sliced_series_list.append(
         [series[slice_size*(parts_count - 1):], series[slice_size*(parts_count - 1):], pd.Series([]), pd.Series([])])
     mean_val = len(sliced_series_list[int(parts_count/2 - 1)][1])
-    for j in range(int(parts_count/2)):
-        reduced_series_len = len(series) - j * slice_size
-        equi_load_step = int(
-            slice_size*(reduced_series_len - mean_val - 1)/reduced_series_len)
-        diff_step = int(slice_size - equi_load_step)
-        reverse_idx = int(parts_count - 2 - j)
-        if j < (parts_count/2 - 1):
-            sliced_series_list[j] = [series[j*slice_size:j*slice_size + diff_step],
-                                     series[slice_size*j:],
-                                     pd.Series([]),
-                                     pd.Series([])]
-            sliced_series_list[reverse_idx] = [*sliced_series_list[reverse_idx],
-                                               series[j*slice_size + diff_step: j *
-                                                      slice_size + slice_size],
-                                               sliced_series_list[j][1][j*slice_size + diff_step:]]
-        else:
-            sliced_series_list[j] = [
-                *sliced_series_list[j], pd.Series([]), pd.Series([])]
+    if slice_size > cores_to_use and cores_to_use > 2:
+        for j in range(int(parts_count/2)):
+            reduced_series_len = len(series) - j * slice_size
+            equi_load_step = int(
+                slice_size*(reduced_series_len - mean_val - 1)/reduced_series_len)
+            diff_step = int(slice_size - equi_load_step)
+            reverse_idx = int(parts_count - 2 - j)
+            if j < (parts_count/2 - 1):
+                sliced_series_list[j] = [series[j*slice_size:j*slice_size + diff_step],
+                                         series[slice_size*j:],
+                                         pd.Series([]),
+                                         pd.Series([])]
+                sliced_series_list[reverse_idx] = [*sliced_series_list[reverse_idx],
+                                                   series[j*slice_size + diff_step: j *
+                                                          slice_size + slice_size],
+                                                   sliced_series_list[j][1][j*slice_size + diff_step:]]
+            else:
+                sliced_series_list[j] = [
+                    *sliced_series_list[j], pd.Series([]), pd.Series([])]
 
     return sliced_series_list
 
