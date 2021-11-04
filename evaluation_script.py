@@ -12,9 +12,13 @@ import glob
 import os
 import sys
 
+apply_multithread = True
+
 
 def set_multithread(series):
-    if len(series) > cores_to_use:
+    global apply_multithread
+    # ab einem Punkt ist Multithreading nicht notwendig
+    if len(series) > cores_to_use and cores_to_use > 1:
         apply_multithread = True
     else:
         apply_multithread = False
@@ -40,21 +44,30 @@ def clean_tmp_data():
 def prepare_sets(dictionary: dict, frame: str, category: str, value: str, wl: pandas.DataFrame):
     filtered_sets, filtered_wl = data_manipulation_helper.filter_sdDicts(
         dictionary, frame, category, value, wl)
-    filtered_wl = filtered_wl[filtered_wl['ATTACH_NO'] == '1']
     series = filtered_sets['headers']['DOC_NUMBER']
     return filtered_sets, filtered_wl, series
 
 
+def add_target_values(series):
+    new_series = [series, series, pandas.Series([]), pandas.Series([])]
+    return new_series
+
+
 def calculate_series_correlation(filtered_wl: pandas.DataFrame, series):
     if apply_multithread:
-        frozen_wl_correlator = functools.partial(
-            calc_utility.correlate_docs, filtered_wl)
-        sliced_series_list = data_manipulation_helper.binomial_equipartition(
-            series, cores_to_use)
-        with concurrent.futures.ProcessPoolExecutor(max_workers=cores_to_use) as executor:
-            executor.map(frozen_wl_correlator, sliced_series_list)
+        if cores_to_use in core_check:
+            frozen_wl_correlator = functools.partial(
+                calc_utility.correlate_docs, filtered_wl)
+            sliced_series_list = data_manipulation_helper.binomial_equipartition(
+                series, cores_to_use)
+            with concurrent.futures.ProcessPoolExecutor(max_workers=cores_to_use) as executor:
+                executor.map(frozen_wl_correlator, sliced_series_list)
+        else:
+            raise InvalidCoreCount(
+                f'Nicht vorgesehen CPU Kernangabe: {cpu_count} liegen vor und {cores_to_use} zugewiesen.')
     else:
-        calc_utility.correlate_docs_single_thread(filtered_wl, series)
+        new_series = add_target_values(series)
+        calc_utility.correlate_docs(filtered_wl, new_series)
 
 
 def main():
