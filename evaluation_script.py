@@ -18,7 +18,7 @@ apply_multithread = True
 def set_multithread(series):
     global apply_multithread
     # ab einem Punkt ist Multithreading nicht notwendig
-    if len(series) > 2 * cores_to_use and cores_to_use > 1:
+    if len(series) > cores_to_use and cores_to_use > 1:
         apply_multithread = True
     else:
         apply_multithread = False
