@@ -7,6 +7,7 @@ import concurrent.futures
 import functools
 from multiprocessing import Process, Manager
 from config import *
+from file_mover import move_spam
 import csv
 import glob
 import os
@@ -64,13 +65,13 @@ def calculate_series_correlation(filtered_wl: pandas.DataFrame, series):
                 executor.map(frozen_wl_correlator, sliced_series_list)
         else:
             raise InvalidCoreCount(
-                f'Nicht vorgesehen CPU Kernangabe: {cpu_count} liegen vor und {cores_to_use} zugewiesen.')
+                f'Nicht vorgesehene CPU Kernangabe: {cpu_count} liegen vor und {cores_to_use} zugewiesen.')
     else:
         new_series = add_target_values(series)
         calc_utility.correlate_docs(filtered_wl, new_series)
 
 
-def main():
+def caclculate_correlation():
     wl = data_loader.load_all_wordlists()
     sd = data_loader.SapData(
         data_loader.path_to_sap_data, data_loader.tangro_om, wl, 0.7)
@@ -94,5 +95,12 @@ def main():
             clean_tmp_data()
 
 
+def get_spam():
+    spam = data_manipulation_helper.classify_spam(
+        data_manipulation_helper.FilterMethod.debitor)
+    return spam
+
+
 if __name__ == '__main__':
-    main()
+    spam_list = get_spam()
+    move_spam(spam_list)

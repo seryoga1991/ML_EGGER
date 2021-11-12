@@ -107,22 +107,3 @@ def load_sap_data(file_name, tangro_modul, path_to_data=path_to_sap_data):
 def get_sap_data(path_to_file, tangro_modul):
     file = preproc_sap_data(path_to_file, tangro_modul)
     return file
-
-
-""" def load_single_csv(path_to_file, file_origin, tangro_modul):
-    if file_origin == from_wordlist:
-        try:
-            path_length = len(path_to_file) + 1
-            file = pd.read_csv(path_to_file, sep=';',engine='python', on_bad_lines = 'warn',quoting=csv.QUOTE_NONE).\
-            assign(DOC_NUMBER = lambda x: f.split('_')[0][path_length : path_length + 10],ATTACH_NO = lambda x: f.split('_')[1][:-4])
-            return file
-        except pd.errors.ParserError:
-            print(
-                "Beim Einlesen der Datei ist ein Parser-Fehler aufgetreten: " + sys.exc_info())
-        except OSError as err:
-            print("Ungültiger Pfad.")
-    elif file_origin == from_sap:
-        file = get_sap_data(path_to_file, tangro_modul)
-        return file
-    else:
-        print("Bitte den Typ der Datei angeben: 'SAP' oder 'WORDLIST'") """
