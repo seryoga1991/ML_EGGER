@@ -9,6 +9,7 @@ from pre_proc_sap_data import preproc_sap_data, additional_processing
 from data_manipulation_helper import split_train_test_by_id, test_set_check
 from calc_utility import correlate_docs
 
+docs = str
 
 class SapData:
     def __init__(self, path_to_file: str, tangro_modul, wordlist_filter: pd.DataFrame = None, create_test_train_set=0.2):
@@ -16,7 +17,7 @@ class SapData:
             self, path_to_file, tangro_modul)
         if wordlist_filter is not None:
             filter_by_wordlist(self, wordlist_filter)
-        if create_test_train_set > 0. and create_test_train_set < 1.:
+        if create_test_train_set < 1.:
             create_test_train_dict(self, create_test_train_set)
 
 
@@ -24,8 +25,12 @@ def create_test_train_dict(self, test_ratio=0.2):
     for attr in dir(self):
         if not attr.startswith('__') and not callable(getattr(self, attr)):
             key_col = sd_key_val_pair.get(attr)
-            train_set, test_set = split_train_test_by_id(
-                getattr(self, attr), test_ratio, key_col)
+            if test_ratio != 0.:
+                train_set, test_set = split_train_test_by_id(
+                    getattr(self, attr), test_ratio, key_col)
+            elif test_ratio == 0.:
+                train_set = getattr(self, attr)
+                test_set = None
             self.__train_dict[attr] = train_set
             self.__test_dict[attr] = test_set
 
@@ -46,7 +51,7 @@ class WordList:
 
 
 def intialize_wl_dataframe(self, path_to_file):
-    self.wordlist = load_all_wordlists(path_to_file)
+    self.wordlist = load_wordlists(path_to_file)
     self.filtered_wl
 
 
@@ -68,9 +73,12 @@ def intialize_data_structs(self, path_to_file, tangro_modul):
     self.__test_dict = {}
 
 
-def load_all_wordlists(PATH_TO_FILES=path_to_wordlists):
+def load_wordlists(PATH_TO_FILES=path_to_wordlists, subset: list[docs] = None):
     try:
-        all_files = glob.glob(os.path.join(PATH_TO_FILES, "*.csv"))
+        if subset == None:
+            all_files = glob.glob(os.path.join(PATH_TO_FILES, "*.csv"))
+        else:
+            all_files =  [os.path.join(PATH_TO_FILES, doc + '.csv') for doc in subset]
         path_length = len(PATH_TO_FILES) + 1
         total_file = pd.concat((pd.read_csv(f, sep=';', engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE).
                                 assign(DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files))

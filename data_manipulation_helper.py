@@ -7,10 +7,11 @@ from zlib import crc32
 from config import *
 from enum import Enum
 
+# Types
 page = int
 first_margin = int
 second_margin = int
-
+margin_setup = list[list[page, list[first_margin, second_margin]]]
 
 class FilterMethod(Enum):
     debitor = 1
@@ -21,7 +22,7 @@ def transpose_list(liste):
     return liste
 
 
-def binomial_equipartition(series: pd.Series, parts_count: int) -> [pd.Series]:
+def binomial_equipartition(series: pd.Series, parts_count: int) ->  list[pd.Series]:
 
     remainder = len(series) % parts_count
     slice_size = int((len(series) - remainder)/parts_count)
@@ -63,8 +64,8 @@ def swap_header_by_row(dataset, row=0):
 def get_debitor_list(correlation_dir):
     only_debitors = '*SOLD_TO*'
     all_debitor_files = glob.glob(os.path.join(correlation_dir, only_debitors))
-    def get_dbitor_from_filename(x): return x.split('_')[3][:-4]
-    debitor_list = [get_dbitor_from_filename(f) for f in all_debitor_files]
+    def get_debitor_from_filename(x): return x.split('_')[3][:-4]
+    debitor_list = [get_debitor_from_filename(f) for f in all_debitor_files]
     return debitor_list
 
 
@@ -88,6 +89,7 @@ def get_docs_below_threshold(filtered_file, attachment, threshold):
 
 def get_spam_by_correlation_scores(file: pd.DataFrame, threshold: np.float64):
     spam_list = []
+    not_spam_list = []
     unique_doc_list = file['DOC1'].append(file['DOC2']).unique()
     for doc in unique_doc_list:
         filtered_file = file[(file['DOC1'] == doc) | (file['DOC2'] == doc)]
@@ -106,34 +108,33 @@ def get_spam_by_correlation_scores(file: pd.DataFrame, threshold: np.float64):
                     below_threshold.index)/len(above_threshold.index)
             else:
                 passed_failed_ratio = 2
-
+            document = str(doc) + '_' + str(attachment)
             if passed_failed_ratio < 1:
-                document = str(doc) + '_' + str(attachment)
                 spam_list.append(document)
+            elif passed_failed_ratio >= 1:
+                not_spam_list.append(document)
 
-    return spam_list
+    return spam_list,not_spam_list
 
 
 def get_spam(filter_value: str, correlation_dir, threshold):
     filter_by = '*_' + filter_value + '.csv'
     file_path = glob.glob(os.path.join(correlation_dir, filter_by))
     file = pd.read_csv(file_path[0])
-    spam_list = get_spam_by_correlation_scores(file, threshold)
+    spam_list, not_spam_list = get_spam_by_correlation_scores(file, threshold)
     print(f'Done:{filter_value}')
-    return spam_list
+    return [spam_list, not_spam_list]
 
 
-def classify_spam(filter_method: FilterMethod, correlation_dir=save_dir, threshold=0.8) -> [int]:
-    spam_list = []
+def classify_spam(filter_method: FilterMethod, correlation_dir=save_dir, threshold=0.8) -> list[int]:
+    classific_dict = {}
     if filter_method == FilterMethod.debitor:
         debitors = get_debitor_list(correlation_dir)
-        spam_list = [get_spam(debitor, correlation_dir, threshold)
-                     for debitor in debitors]
-        # Spamliste flatten
-        spam_list = [spam for sublist in spam_list for spam in sublist]
+        for debitor in debitors: 
+            classific_dict[debitor] = get_spam(debitor, correlation_dir, threshold)
     else:
         print("Eine gültige Methode für den Spam-Filter angeben.")
-    return spam_list
+    return classific_dict
 
 
 def test_set_check(identifier, test_ratio):
@@ -146,7 +147,7 @@ def split_train_test_by_id(data, test_ratio, id_column):
     return data.loc[~in_test_set], data.loc[in_test_set]
 
 
-def filter_sdDicts(object, filter_set, filter_column, filter_value, wordlist=None):
+def filter_sdDicts(object: dict, filter_set: sd_key_val_pair.keys, filter_column, filter_value, wordlist=None):
 
     if filter_set not in list(sd_key_val_pair.keys()):
         raise ValueError(
@@ -183,12 +184,12 @@ def sort_margins(left_margins, up_margins):
 def normalize_margins(left_margins, up_margins):
     normalized_left = left_margins
     normalized_up = up_margins
-    for idx, item in enumarate(normalized_left):
+    for idx, item in enumerate(normalized_left):
 
         if item[1][1] > left_max_dpi:
             normalized_left[idx][1][0] = int(item[1][0]/item[1][1])
             normalized_left[idx][1][1] = left_max_dpi
-    for idx, item in enumarate(normalized_up):
+    for idx, item in enumerate(normalized_up):
         if item[1][1] > up_max_dpi:
             normalized_up[idx][1][0] = int(item[1][0]/item[1][1])
             normalized_up[idx][1][1] = up_max_dpi
@@ -226,11 +227,14 @@ def sort_wl_by_coord(wordlist: pd.DataFrame):
     sorted_wl = wordlist.sort_values(by=['SEITE', 'LINKS', 'OBEN'])
     return sorted_wl
 
+def sort_wl_by_neighbors(wordlist: pd.DataFrame):
+    sorted_wl = wordlist.sort_values(by=['SEITE', 'LINKS', 'OBEN'])
+    return sorted_wl
 
-def filter_sort_wl_by_coord(wordlist: pd.DataFrame, left_margins: [[page, [first_margin, second_margin]]], up_margins: [[page, [first_margin, second_margin]]]):
+def filter_sort_wl_by_coord(wordlist: pd.DataFrame, left_margins: margin_setup, up_margins: margin_setup):
     sorted_left, sorted_up = sort_margins(left_margins,  up_margins)
     normalized_left, normalized_up = normalize_margins(sorted_left, sorted_up)
     filtered_wl_left = filter_wl_by_left_coord(wordlist, normalized_left)
-    filtered_wl_up = filter_wl_by_up_coord(wordlist, normalized_up)
+    filtered_wl_up = filter_wl_by_up_coord(filtered_wl_left, normalized_up)
     sorted_filtered_wl = sort_wl_by_coord(filtered_wl_up)
     return sorted_filtered_wl

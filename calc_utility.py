@@ -4,14 +4,20 @@ from custom_transformer import hot_encode
 import csv
 import os
 from math import sqrt
-from config import *
+import config as cfg 
+
+#Types
+document_number = int 
+aggregated_array = np.ndarray
+two_doc_aggregation = tuple[list[document_number,document_number],list[aggregated_array,aggregated_array]]
+doc_doc_correlation = list[tuple[tuple[document_number,document_number],np.float64]]
 
 
 class CorrelationError(Exception()):
     pass
 
 
-def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> ([int], [np.ndarray]):
+def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> two_doc_aggregation:
     filtered_wl = wordlist.drop_duplicates(
         subset=['DOC_NUMBER', 'ATTACH_NO'], keep='last')
     how_many_wl = len(filtered_wl.index)
@@ -32,7 +38,7 @@ def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> ([
             f'Es dürfen nur 2 Wortlisten mit einadner korreliert werden. Es wurden aber {how_many_wl} übergeben.')
 
 
-def correlate(vec: ([int], [np.ndarray]), first_attachment, second_attachment):
+def correlate(vec: two_doc_aggregation, first_attachment, second_attachment):
     normalized_difference = np.linalg.norm(
         (vec[1][0]-vec[1][1]), 1)/len(vec[1][1])
     return [vec[0][0], vec[0][1], first_attachment, second_attachment, normalized_difference]
@@ -54,14 +60,15 @@ def equalize_pages(first_wl: pd.DataFrame, second_wl: pd.DataFrame):
     return reduced_first_wl, reduced_second_wl
 
 
-def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> [((int, int), np.float64)]:
+def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> doc_doc_correlation:
     for count in range(2):
         docs = doc_range[2*count + 1].copy()
         docs_count = len(docs)
         docs_to_correlate = doc_range[2*count].copy()
         doc_corr_count = len(docs_to_correlate)
         if not docs.empty:
-            with open(os.path.join(temporary_save_dir, f'data_{name_appendix}_{doc_corr_count}_{docs_count}.csv'), 'a+', newline='') as temp_file:
+            cfg.temp_name =  f'data_{cfg.name_appendix}_{doc_corr_count}_{docs_count}.csv'
+            with open(os.path.join(cfg.temporary_save_dir, cfg.temp_name), 'a+', newline='') as temp_file:
                 file_writer = csv.writer(temp_file, delimiter=',')
                 print('Start:', doc_corr_count, docs_count)
                 file_writer.writerow(
