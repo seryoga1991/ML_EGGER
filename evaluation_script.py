@@ -1,3 +1,4 @@
+from shutil import Error
 import pandas
 import numpy
 import calc_utility
@@ -13,6 +14,7 @@ import glob
 import os
 import sys
 
+pass_docs = None
 apply_multithread = True
 
 
@@ -102,16 +104,19 @@ def classify_docs():
 
 
 def prepare_structs_for_comparisson(debitor_dict, debitor, filter_dict, wordlist):
-    exemplary_non_spam_doc = debitor_dict[debitor][1][0]
-    filtered_dict = data_manipulation_helper.filter_sdDicts(
-        filter_dict, 'headers', 'SOLD_TO', debitor, wordlist)
-    docs_for_debitor = filtered_dict.get('headers')[cfg.sd_key_val_pair.get(
-        'headers')]
-    compare_to_doc = pandas.Series(exemplary_non_spam_doc)
-    docs_for_correlate = [docs_for_debitor,
-                          compare_to_doc, pandas.Series([]), pandas.Series([])]
-    wl = wordlist[wordlist['DOC_NUMBER'].isin(docs_for_correlate[0])]
-    return docs_to_compare, wl
+    try:
+        examplary_non_spam_doc = debitor_dict[debitor][1][0]
+        filtered_dict,wl = data_manipulation_helper.filter_sdDicts(
+            filter_dict, 'headers', 'SOLD_TO', debitor, wordlist)
+        docs_for_debitor = filtered_dict.get('headers')[cfg.sd_key_val_pair.get(
+            'headers')]
+        compare_to_doc = pandas.Series(examplary_non_spam_doc)
+        docs_for_correlation = [docs_for_debitor,
+                            compare_to_doc, pandas.Series([]), pandas.Series([])]
+    except IndexError as idx:
+        docs_for_correlation = pass_docs
+        wl = pass_docs
+    return docs_for_correlation, wl
 
 
 def correlacte_docs(wordlist, docs_to_compare):
@@ -127,26 +132,32 @@ def determine_all_spam(classified_dict):
                              data_loader.tangro_om, wl, 0.)
     spam_list = []
     non_spam_list = []
-    cfg.name_appendix = 'temp_corr'
     for key in classified_dict:
+        cfg.name_appendix = key
         docs_to_compare, wordlist = prepare_structs_for_comparisson(
             debitor_dict=classified_dict, debitor=key, filter_dict=sd.__train_dict, wordlist=wl)
-        file = correlacte_docs(wordlist, docs_to_compare)
-        temp_spam_list, temp_non_spam_list = data_manipulation_helper.get_spam_by_correlation_scores(
-            file, 0.8)
-        spam_list.append(temp_spam_list)
-        non_spam_list.append(temp_non_spam_list)
-
+        if docs_to_compare != pass_docs:
+            file = correlacte_docs(wordlist, docs_to_compare)
+            temp_spam_list, temp_non_spam_list = data_manipulation_helper.get_spam_by_correlation_scores(
+                file, 0.8)
+            spam_list.append(temp_spam_list)
+            non_spam_list.append(temp_non_spam_list)
+        elif docs_to_compare == pass_docs:
+            pass
     spam_list = [spam for sublist in spam_list for spam in sublist]
     return spam_list
 
 
 def get_rid_of_spam(data_dir=cfg.path_to_wordlists):
-    spam_list = []
-    classified_dict = classify_docs()
-    spam_list = determine_all_spam(classified_dict)
-    move_spam(spam_list)
-    clean_tmp_data()
+    try:
+        spam_list = []
+        classified_dict = classify_docs()
+        spam_list = determine_all_spam(classified_dict)
+        print(len(spam_list))
+        #move_spam(spam_list)
+        clean_tmp_data()
+    finally: 
+        clean_tmp_data()
 
 
 if __name__ == '__main__':

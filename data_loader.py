@@ -89,9 +89,12 @@ def load_wordlists(PATH_TO_FILES=path_to_wordlists, subset: list[docs] = None):
 
 
 def attachno(f: str):
-    attachnumb = f.split('_')[1][:-4]
-    if re.search('[a-zA-Z]', attachnumb):
-        attachnumb = '1'
+    try:
+        attachnumb = f.split('_')[1][:-4]
+        if re.search('[a-zA-Z]', attachnumb):
+            attachnumb = '1'
+    except:
+        attachnumb = None
     return attachnumb
 
 

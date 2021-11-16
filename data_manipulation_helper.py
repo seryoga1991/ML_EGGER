@@ -70,20 +70,22 @@ def get_debitor_list(correlation_dir):
 
 
 def get_docs_above_threshold(filtered_file, attachment, threshold):
-    above_threshold = filtered_file[(filtered_file['DOC1_ATTNO'] == attachment) & (
+    ab_doc1 = filtered_file[(filtered_file['DOC1_ATTNO'] == attachment) & (
         filtered_file['Distance'] >= threshold)]
-    above_threshold.append(filtered_file[(filtered_file['DOC2_ATTNO'] == attachment) & (
-        filtered_file['Distance'] >= threshold)])
+    ab_doc2 = filtered_file[(filtered_file['DOC2_ATTNO'] == attachment) & (
+        filtered_file['Distance'] >= threshold)]
+    above_threshold = pd.concat([ab_doc1,ab_doc2],ignore_index=True)
     return above_threshold
 
 
 def get_docs_below_threshold(filtered_file, attachment, threshold):
-    below_threshold = filtered_file[(filtered_file['DOC1_ATTNO'] == attachment) & (
+    bl_doc1 = below_threshold = filtered_file[(filtered_file['DOC1_ATTNO'] == attachment) & (
         filtered_file['Distance'] < threshold) & (
         filtered_file['Distance'] > 0.0)]
-    below_threshold.append(filtered_file[(filtered_file['DOC2_ATTNO'] == attachment) & (
+    bl_doc2 = filtered_file[(filtered_file['DOC2_ATTNO'] == attachment) & (
         filtered_file['Distance'] < threshold) & (
-        filtered_file['Distance'] > 0.0)])
+        filtered_file['Distance'] > 0.0)]
+    below_threshold =  pd.concat([bl_doc1,bl_doc2],ignore_index=True)
     return below_threshold
 
 
@@ -94,7 +96,8 @@ def get_spam_by_correlation_scores(file: pd.DataFrame, threshold: np.float64):
     for doc in unique_doc_list:
         filtered_file = file[(file['DOC1'] == doc) | (file['DOC2'] == doc)]
         unique_attachments = filtered_file[filtered_file['DOC1']
-                                           == doc]['DOC1_ATTNO'].unique()
+                                           == doc]['DOC1_ATTNO'].append(filtered_file[filtered_file['DOC2']
+                                           == doc]['DOC2_ATTNO']).unique()
         for attachment in unique_attachments:
 
             above_threshold = get_docs_above_threshold(
@@ -149,13 +152,14 @@ def split_train_test_by_id(data, test_ratio, id_column):
 
 def filter_sdDicts(object: dict, filter_set: sd_key_val_pair.keys, filter_column, filter_value, wordlist=None):
 
+    conv_filter_val = int(filter_value)
     if filter_set not in list(sd_key_val_pair.keys()):
         raise ValueError(
             "Die Parameter filter_set und object müssen in %r liegen" % sd_key_val_pair.keys())
     else:
         new_dict = {}
         Set = object.get(filter_set)
-        Set = Set[Set[filter_column] == filter_value]
+        Set = Set[Set[filter_column] == conv_filter_val]
         new_dict[filter_set] = Set
         if wordlist is not None:
             filtered_wordlist = wordlist[wordlist['DOC_NUMBER'].isin(

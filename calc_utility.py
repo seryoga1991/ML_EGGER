@@ -5,7 +5,7 @@ import csv
 import os
 from math import sqrt
 import config as cfg 
-
+import re
 #Types
 document_number = int 
 aggregated_array = np.ndarray
@@ -13,7 +13,7 @@ two_doc_aggregation = tuple[list[document_number,document_number],list[aggregate
 doc_doc_correlation = list[tuple[tuple[document_number,document_number],np.float64]]
 
 
-class CorrelationError(Exception()):
+class CorrelationError(Exception):
     pass
 
 
@@ -43,12 +43,24 @@ def correlate(vec: two_doc_aggregation, first_attachment, second_attachment):
         (vec[1][0]-vec[1][1]), 1)/len(vec[1][1])
     return [vec[0][0], vec[0][1], first_attachment, second_attachment, normalized_difference]
 
+def attachno(f: str):
+    try:
+        attachnumb = f.split('_')[1]
+        doc_no = int(f.split('_')[0])
+    except:
+        doc_no = None
+        attachnumb = None
+    return attachnumb,doc_no
 
-def get_unique_wl_attachment(wordlist: pd.DataFrame, doc_no: int):
-    filtered_wl = wordlist[wordlist['DOC_NUMBER'] == doc_no]
+def get_unique_wl_attachment(wordlist: pd.DataFrame, doc_no):
+    attachnumber,doc_number = attachno(doc_no)
+    if attachnumber != None:    
+        filtered_wl = wordlist[(wordlist['DOC_NUMBER'] == doc_number) & (wordlist['ATTACH_NO'] == attachnumber)]
+    elif attachnumber == None:
+        filtered_wl = wordlist[wordlist['DOC_NUMBER'] == doc_no]        
     unique_vals = filtered_wl['ATTACH_NO'].unique()
-    if len(unique_vals) > 5:  # höchstens  5 Attachments sonst wird Rechenzeit zu hoch
-        unique_vals = unique_vals[0:5]
+    """     if len(unique_vals) > 5:  # höchstens  5 Attachments sonst wird Rechenzeit zu hoch
+        unique_vals = unique_vals[0:5] """
     return unique_vals, filtered_wl
 
 
