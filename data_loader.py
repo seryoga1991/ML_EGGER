@@ -6,10 +6,20 @@ import csv
 import re
 from config import *
 from pre_proc_sap_data import preproc_sap_data, additional_processing
-from data_manipulation_helper import split_train_test_by_id, test_set_check
 from calc_utility import correlate_docs
 
 docs = str
+
+
+def test_set_check(identifier, test_ratio):
+    return crc32(np.int64(identifier)) & 0xffffffff < test_ratio * 2**32
+
+
+def split_train_test_by_id(data, test_ratio, id_column):
+    ids = data[id_column]
+    in_test_set = ids.apply(lambda id_: test_set_check(id_, test_ratio))
+    return data.loc[~in_test_set], data.loc[in_test_set]
+
 
 class SapData:
     def __init__(self, path_to_file: str, tangro_modul, wordlist_filter: pd.DataFrame = None, create_test_train_set=0.2):
@@ -78,11 +88,28 @@ def load_wordlists(PATH_TO_FILES=path_to_wordlists, subset: list[docs] = None):
         if subset == None:
             all_files = glob.glob(os.path.join(PATH_TO_FILES, "*.csv"))
         else:
-            all_files =  [os.path.join(PATH_TO_FILES, doc + '.csv') for doc in subset]
+            all_files = [os.path.join(PATH_TO_FILES, doc + '.csv')
+                         for doc in subset]
         path_length = len(PATH_TO_FILES) + 1
-        total_file = pd.concat((pd.read_csv(f, sep=';', engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE).
-                                assign(DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files))
-        # 10 ist hier gewählt da der Schlüssel eines Dokuments in SAP immer 10 Zeichen hat : Auftragsnummer, Belegnummer, Bestellnummer etc.
+        if len(all_files) == 1:
+            single_file = True
+        else:
+            single_file = False
+
+        if not single_file:
+            total_file = pd.concat((pd.read_csv(f, sep=';', engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE).
+                                    assign(DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files))
+        else:
+            try:
+                total_file = [pd.read_csv(f, sep=';', engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE).assign(
+                    DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files]
+                total_file = total_file[0]
+            except FileNotFoundError as e:
+                ext_f = all_files[0].replace('_1.csv', '_Ext*.csv')
+                all_files = glob.glob(ext_f)
+                total_file = [pd.read_csv(f, sep=';', engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE).assign(
+                    DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files]
+                total_file = total_file[0]
     except pd.errors.ParserError:
         print("Beim Einlesen der Gesamtwortliste ist ein Parser-Fehler aufgetreten: " + sys.exc_info())
     return total_file

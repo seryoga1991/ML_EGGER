@@ -1,3 +1,5 @@
+
+from data_loader import load_wordlists
 import os
 import sys
 import pandas as pd
@@ -7,11 +9,13 @@ from zlib import crc32
 from config import *
 from enum import Enum
 
+
 # Types
 page = int
 first_margin = int
 second_margin = int
 margin_setup = list[list[page, list[first_margin, second_margin]]]
+
 
 class FilterMethod(Enum):
     debitor = 1
@@ -22,7 +26,7 @@ def transpose_list(liste):
     return liste
 
 
-def binomial_equipartition(series: pd.Series, parts_count: int) ->  list[pd.Series]:
+def binomial_equipartition(series: pd.Series, parts_count: int) -> list[pd.Series]:
 
     remainder = len(series) % parts_count
     slice_size = int((len(series) - remainder)/parts_count)
@@ -54,13 +58,6 @@ def binomial_equipartition(series: pd.Series, parts_count: int) ->  list[pd.Seri
     return sliced_series_list
 
 
-def swap_header_by_row(dataset, row=0):
-    dataset_new = dataset.copy()
-    dataset_new.columns = dataset.iloc[row]
-    dataset_new.drop([row])
-    return dataset_new
-
-
 def get_debitor_list(correlation_dir):
     only_debitors = '*SOLD_TO*'
     all_debitor_files = glob.glob(os.path.join(correlation_dir, only_debitors))
@@ -74,7 +71,7 @@ def get_docs_above_threshold(filtered_file, attachment, threshold):
         filtered_file['Distance'] >= threshold)]
     ab_doc2 = filtered_file[(filtered_file['DOC2_ATTNO'] == attachment) & (
         filtered_file['Distance'] >= threshold)]
-    above_threshold = pd.concat([ab_doc1,ab_doc2],ignore_index=True)
+    above_threshold = pd.concat([ab_doc1, ab_doc2], ignore_index=True)
     return above_threshold
 
 
@@ -85,7 +82,7 @@ def get_docs_below_threshold(filtered_file, attachment, threshold):
     bl_doc2 = filtered_file[(filtered_file['DOC2_ATTNO'] == attachment) & (
         filtered_file['Distance'] < threshold) & (
         filtered_file['Distance'] > 0.0)]
-    below_threshold =  pd.concat([bl_doc1,bl_doc2],ignore_index=True)
+    below_threshold = pd.concat([bl_doc1, bl_doc2], ignore_index=True)
     return below_threshold
 
 
@@ -97,30 +94,42 @@ def get_spam_by_correlation_scores(file: pd.DataFrame, threshold: np.float64):
         filtered_file = file[(file['DOC1'] == doc) | (file['DOC2'] == doc)]
         unique_attachments = filtered_file[filtered_file['DOC1']
                                            == doc]['DOC1_ATTNO'].append(filtered_file[filtered_file['DOC2']
-                                           == doc]['DOC2_ATTNO']).unique()
+                                                                                      == doc]['DOC2_ATTNO']).unique()
         for attachment in unique_attachments:
-
-            above_threshold = get_docs_above_threshold(
-                filtered_file, attachment, threshold)
-
-            below_threshold = get_docs_below_threshold(
-                filtered_file, attachment, threshold)
-
-            if not above_threshold.empty:
-                passed_failed_ratio = len(
-                    below_threshold.index)/len(above_threshold.index)
-            else:
-                passed_failed_ratio = 2
             document = str(doc) + '_' + str(attachment)
-            if passed_failed_ratio < 1:
+            modul_specific_spam = get_spam_by_modul_specs(
+                modul='sd', doc=document)
+            if document != modul_specific_spam:
+                above_threshold = get_docs_above_threshold(
+                    filtered_file, attachment, threshold)
+                below_threshold = get_docs_below_threshold(
+                    filtered_file, attachment, threshold)
+                if not above_threshold.empty:
+                    passed_failed_ratio = len(
+                        below_threshold.index)/len(above_threshold.index)
+                else:
+                    passed_failed_ratio = 2
+                if passed_failed_ratio < 1:
+                    spam_list.append(document)
+                elif passed_failed_ratio >= 1:
+                    not_spam_list.append(document)
+            else:
                 spam_list.append(document)
-            elif passed_failed_ratio >= 1:
-                not_spam_list.append(document)
-
-    return spam_list,not_spam_list
+    return spam_list, not_spam_list
 
 
-def get_spam(filter_value: str, correlation_dir, threshold):
+def get_spam_by_modul_specs(modul, doc):
+    if modul == 'sd':
+        wordlist = load_wordlists(
+            PATH_TO_FILES=path_to_wordlists, subset=[doc])
+        filtered_wl = wordlist[wordlist['WORT'] == doc]
+        if not filtered_wl.empty:
+            return doc
+        else:
+            return None
+
+
+def get_spam(filter_value: str, correlation_dir, threshold, modul: str = ''):
     filter_by = '*_' + filter_value + '.csv'
     file_path = glob.glob(os.path.join(correlation_dir, filter_by))
     file = pd.read_csv(file_path[0])
@@ -133,21 +142,12 @@ def classify_spam(filter_method: FilterMethod, correlation_dir=save_dir, thresho
     classific_dict = {}
     if filter_method == FilterMethod.debitor:
         debitors = get_debitor_list(correlation_dir)
-        for debitor in debitors: 
-            classific_dict[debitor] = get_spam(debitor, correlation_dir, threshold)
+        for debitor in debitors:
+            classific_dict[debitor] = get_spam(
+                debitor, correlation_dir, threshold, 'sd')
     else:
         print("Eine gültige Methode für den Spam-Filter angeben.")
     return classific_dict
-
-
-def test_set_check(identifier, test_ratio):
-    return crc32(np.int64(identifier)) & 0xffffffff < test_ratio * 2**32
-
-
-def split_train_test_by_id(data, test_ratio, id_column):
-    ids = data[id_column]
-    in_test_set = ids.apply(lambda id_: test_set_check(id_, test_ratio))
-    return data.loc[~in_test_set], data.loc[in_test_set]
 
 
 def filter_sdDicts(object: dict, filter_set: sd_key_val_pair.keys, filter_column, filter_value, wordlist=None):
@@ -231,9 +231,11 @@ def sort_wl_by_coord(wordlist: pd.DataFrame):
     sorted_wl = wordlist.sort_values(by=['SEITE', 'LINKS', 'OBEN'])
     return sorted_wl
 
+
 def sort_wl_by_neighbors(wordlist: pd.DataFrame):
     sorted_wl = wordlist.sort_values(by=['SEITE', 'LINKS', 'OBEN'])
     return sorted_wl
+
 
 def filter_sort_wl_by_coord(wordlist: pd.DataFrame, left_margins: margin_setup, up_margins: margin_setup):
     sorted_left, sorted_up = sort_margins(left_margins,  up_margins)

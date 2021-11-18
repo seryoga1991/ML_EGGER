@@ -2,7 +2,7 @@ from shutil import Error
 import pandas
 import numpy
 import calc_utility
-import data_manipulation_helper
+from data_manipulation_helper import binomial_equipartition, filter_sdDicts, classify_spam, get_spam_by_correlation_scores, FilterMethod
 import data_loader
 import concurrent.futures
 import functools
@@ -45,7 +45,7 @@ def clean_tmp_data():
 
 
 def prepare_sets(dictionary: dict, frame: str, category: str, value: str, wl: pandas.DataFrame):
-    filtered_sets, filtered_wl = data_manipulation_helper.filter_sdDicts(
+    filtered_sets, filtered_wl = filter_sdDicts(
         dictionary, frame, category, value, wl)
     series = filtered_sets['headers']['DOC_NUMBER']
     return filtered_sets, filtered_wl, series
@@ -61,7 +61,7 @@ def calculate_series_correlation(filtered_wl: pandas.DataFrame, series):
         if cfg.cores_to_use in cfg.core_check:
             frozen_wl_correlator = functools.partial(
                 calc_utility.correlate_docs, filtered_wl)
-            sliced_series_list = data_manipulation_helper.binomial_equipartition(
+            sliced_series_list = binomial_equipartition(
                 series, cfg.cores_to_use)
             with concurrent.futures.ProcessPoolExecutor(max_workers=cfg.cores_to_use) as executor:
                 executor.map(frozen_wl_correlator, sliced_series_list)
@@ -98,21 +98,20 @@ def caclculate_correlation():
 
 
 def classify_docs():
-    classified_dict = data_manipulation_helper.classify_spam(
-        data_manipulation_helper.FilterMethod.debitor)
+    classified_dict = classify_spam(FilterMethod.debitor)
     return classified_dict
 
 
 def prepare_structs_for_comparisson(debitor_dict, debitor, filter_dict, wordlist):
     try:
         examplary_non_spam_doc = debitor_dict[debitor][1][0]
-        filtered_dict,wl = data_manipulation_helper.filter_sdDicts(
+        filtered_dict, wl = filter_sdDicts(
             filter_dict, 'headers', 'SOLD_TO', debitor, wordlist)
         docs_for_debitor = filtered_dict.get('headers')[cfg.sd_key_val_pair.get(
             'headers')]
         compare_to_doc = pandas.Series(examplary_non_spam_doc)
         docs_for_correlation = [docs_for_debitor,
-                            compare_to_doc, pandas.Series([]), pandas.Series([])]
+                                compare_to_doc, pandas.Series([], dtype=float), pandas.Series([], dtype=float)]
     except IndexError as idx:
         docs_for_correlation = pass_docs
         wl = pass_docs
@@ -138,7 +137,7 @@ def determine_all_spam(classified_dict):
             debitor_dict=classified_dict, debitor=key, filter_dict=sd.__train_dict, wordlist=wl)
         if docs_to_compare != pass_docs:
             file = correlacte_docs(wordlist, docs_to_compare)
-            temp_spam_list, temp_non_spam_list = data_manipulation_helper.get_spam_by_correlation_scores(
+            temp_spam_list, temp_non_spam_list = get_spam_by_correlation_scores(
                 file, 0.8)
             spam_list.append(temp_spam_list)
             non_spam_list.append(temp_non_spam_list)
@@ -154,9 +153,9 @@ def get_rid_of_spam(data_dir=cfg.path_to_wordlists):
         classified_dict = classify_docs()
         spam_list = determine_all_spam(classified_dict)
         print(len(spam_list))
-        #move_spam(spam_list)
+        move_spam(spam_list)
         clean_tmp_data()
-    finally: 
+    finally:
         clean_tmp_data()
 
 

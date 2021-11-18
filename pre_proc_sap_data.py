@@ -3,7 +3,14 @@ import glob
 import os
 import sys
 import numpy as np
-from data_manipulation_helper import swap_header_by_row 
+
+
+def swap_header_by_row(dataset, row=0):
+    dataset_new = dataset.copy()
+    dataset_new.columns = dataset.iloc[row]
+    dataset_new.drop([row])
+    return dataset_new
+
 
 def preproc_sap_data(path_to_file, tangro_modul):
     try:
@@ -90,6 +97,7 @@ def additional_processing(file):
     if 'MATERIAL' in file.columns:
         dataType_Obj = file.dtypes['MATERIAL']
         if dataType_Obj == np.float64 or dataType_Obj == np.int64:
-            file['MATERIAL'] = file['MATERIAL'].apply(lambda x:np.format_float_positional(x,trim = '-'))
-    else: 
+            file['MATERIAL'] = file['MATERIAL'].apply(
+                lambda x: np.format_float_positional(x, trim='-'))
+    else:
         pass
