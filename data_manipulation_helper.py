@@ -89,12 +89,17 @@ def get_docs_below_threshold(filtered_file, attachment, threshold):
 def get_spam_by_correlation_scores(file: pd.DataFrame, threshold: np.float64):
     spam_list = []
     not_spam_list = []
-    unique_doc_list = file['DOC1'].append(file['DOC2']).unique()
+    unique_doc_list = file['DOC1']
+    unique_doc_list = unique_doc_list.append(file['DOC2'])
+    unique_doc_list = unique_doc_list.unique()
     for doc in unique_doc_list:
         filtered_file = file[(file['DOC1'] == doc) | (file['DOC2'] == doc)]
         unique_attachments = filtered_file[filtered_file['DOC1']
-                                           == doc]['DOC1_ATTNO'].append(filtered_file[filtered_file['DOC2']
-                                                                                      == doc]['DOC2_ATTNO']).unique()
+                                           == doc]['DOC1_ATTNO']
+        unique_attachments.append(
+            filtered_file[filtered_file['DOC2'] == doc]['DOC2_ATTNO'])
+        unique_attachments = unique_attachments.unique()
+
         for attachment in unique_attachments:
             document = str(doc) + '_' + str(attachment)
             modul_specific_spam = get_spam_by_modul_specs(
@@ -122,9 +127,12 @@ def get_spam_by_modul_specs(modul, doc):
     if modul == 'sd':
         wordlist = load_wordlists(
             PATH_TO_FILES=path_to_wordlists, subset=[doc])
-        filtered_wl = wordlist[wordlist['WORT'] == doc]
-        if not filtered_wl.empty:
-            return doc
+        if not wordlist.empty:
+            filtered_wl = wordlist[wordlist['WORT'] == doc]
+            if not filtered_wl.empty:
+                return doc
+            else:
+                return None
         else:
             return None
 

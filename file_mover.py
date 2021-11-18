@@ -22,4 +22,8 @@ def move_spam(data_to_move, move_from_dir=cfg.path_to_wordlists, move_to_dir=cfg
         doc_types = doc + '.*'
         files_to_move = glob.glob(os.path.join(move_from_dir, doc_types))
         for file in files_to_move:
-            shutil.move(file, move_to_dir)
+            try:
+                shutil.move(file, move_to_dir)
+            except:
+                # file does not exist and cant be moved
+                print(f'Datei {file} existiert nicht')

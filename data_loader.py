@@ -105,11 +105,16 @@ def load_wordlists(PATH_TO_FILES=path_to_wordlists, subset: list[docs] = None):
                     DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files]
                 total_file = total_file[0]
             except FileNotFoundError as e:
+
                 ext_f = all_files[0].replace('_1.csv', '_Ext*.csv')
+                print(ext_f)
                 all_files = glob.glob(ext_f)
-                total_file = [pd.read_csv(f, sep=';', engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE).assign(
-                    DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files]
-                total_file = total_file[0]
+                if all_files != []:
+                    total_file = [pd.read_csv(f, sep=';', engine='python', on_bad_lines='warn', quoting=csv.QUOTE_NONE).assign(
+                        DOC_NUMBER=lambda x: docno(f, path_length), ATTACH_NO=lambda x: attachno(f)) for f in all_files]
+                    total_file = total_file[0]
+                else:
+                    total_file = pd.DataFrame([], dtype=float)
     except pd.errors.ParserError:
         print("Beim Einlesen der Gesamtwortliste ist ein Parser-Fehler aufgetreten: " + sys.exc_info())
     return total_file
