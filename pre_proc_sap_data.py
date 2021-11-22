@@ -62,6 +62,8 @@ def __add_auxillary_cols(file,):
     new_column = 'A1'
     file.at[0, 0] = file.at[0, 0] + ',' + new_column
 
+# TODO: Anfangsblock refactorn ... zu groß und unverständlich
+
 
 def __handle_bad_lines(path_to_file, tangro_modul):
     file = pd.read_csv(path_to_file, header=None, sep='\n')
@@ -93,11 +95,19 @@ def __handle_bad_lines(path_to_file, tangro_modul):
     return processed_file
 
 
+def convert_floatCol_to_strCol(file, column: str):
+    dataType_Obj = file.dtypes[column]
+    if dataType_Obj == np.float64 or dataType_Obj == np.int64:
+        file[column] = file[column].apply(
+            lambda x: np.format_float_positional(x, trim='-'))
+
+
 def additional_processing(file):
     if 'MATERIAL' in file.columns:
-        dataType_Obj = file.dtypes['MATERIAL']
-        if dataType_Obj == np.float64 or dataType_Obj == np.int64:
-            file['MATERIAL'] = file['MATERIAL'].apply(
-                lambda x: np.format_float_positional(x, trim='-'))
+        convert_floatCol_to_strCol(file, column='MATERIAL')
+    if 'SD_DOC' in file.columns:
+        convert_floatCol_to_strCol(file, column='SD_DOC')
+    if 'DOC_NUMBER' in file.columns:
+        convert_floatCol_to_strCol(file, column='DOC_NUMBER')
     else:
         pass
