@@ -5,6 +5,8 @@ import email
 import sys
 import shutil
 
+# TODO verkleinern -- in den if's gerade Funktionen draus machen
+
 
 def save_mail_attachment(PATH_TO_FILES, SAVE_PATH):
     type_message = ".MSG"
@@ -56,5 +58,3 @@ def save_mail_attachment(PATH_TO_FILES, SAVE_PATH):
             target_file = os.path.join(save_path, file.title())
             new_target_file_name = os.path.join(save_path, file.title()[8:])
             os.rename(target_file, new_target_file_name)
-
-

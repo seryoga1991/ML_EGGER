@@ -1,9 +1,10 @@
 from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
 import numpy as np
+import cust_types as cst
 
 
-def hot_encode(wordlist: pd.DataFrame) -> np.ndarray:
+def hot_encode(wordlist: cst.wordlist) -> np.ndarray:
     if not wordlist.empty:
         cat_encoder = OneHotEncoder()
         worte = wordlist[['WORT']]

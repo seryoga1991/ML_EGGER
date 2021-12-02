@@ -5,21 +5,17 @@ import csv
 import os
 from math import sqrt
 import config as cfg
+import cust_types as cst
 import re
-# Types
-document_number = int
-aggregated_array = np.ndarray
-two_doc_aggregation = tuple[list[document_number,
-                                 document_number], list[aggregated_array, aggregated_array]]
-doc_doc_correlation = list[tuple[tuple[document_number,
-                                       document_number], np.float64]]
 
 
 class CorrelationError(Exception):
     pass
 
+# ToDo : Refactorn --> Bezeichnungen der Variablen verbessern und Funks kapseln
 
-def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> two_doc_aggregation:
+
+def aggregate_by_docno(wordlist: cst.wordlist, hot_encoded_wl: np.ndarray) -> cst.two_doc_aggregation:
     filtered_wl = wordlist.drop_duplicates(
         subset=['DOC_NUMBER', 'ATTACH_NO'], keep='last')
     how_many_wl = len(filtered_wl.index)
@@ -40,7 +36,7 @@ def aggregate_by_docno(wordlist: pd.DataFrame, hot_encoded_wl: np.ndarray) -> tw
             f'Es dürfen nur 2 Wortlisten mit einadner korreliert werden. Es wurden aber {how_many_wl} übergeben.')
 
 
-def correlate(vec: two_doc_aggregation, first_attachment, second_attachment):
+def correlate(vec: cst.two_doc_aggregation, first_attachment, second_attachment):
     normalized_difference = np.linalg.norm(
         (vec[1][0]-vec[1][1]), 1)/len(vec[1][1])
     return [vec[0][0], vec[0][1], first_attachment, second_attachment, normalized_difference]
@@ -49,14 +45,14 @@ def correlate(vec: two_doc_aggregation, first_attachment, second_attachment):
 def attachno(f: str):
     try:
         attachnumb = f.split('_')[1]
-        doc_no = int(f.split('_')[0])
+        doc_no = f.split('_')[0]
     except:
         doc_no = f
         attachnumb = None
     return attachnumb, doc_no
 
 
-def get_unique_wl_attachment(wordlist: pd.DataFrame, doc_no):
+def get_unique_wl_attachment(wordlist: cst.wordlist, doc_no):
     attachnumber, doc_number = attachno(doc_no)
     if attachnumber != None:
         filtered_wl = wordlist[(wordlist['DOC_NUMBER'] == doc_number) & (
@@ -64,8 +60,6 @@ def get_unique_wl_attachment(wordlist: pd.DataFrame, doc_no):
     elif attachnumber == None:
         filtered_wl = wordlist[wordlist['DOC_NUMBER'] == doc_no]
     unique_vals = filtered_wl['ATTACH_NO'].unique()
-    """     if len(unique_vals) > 5:  # höchstens  5 Attachments sonst wird Rechenzeit zu hoch
-        unique_vals = unique_vals[0:5] """
     return unique_vals, filtered_wl
 
 
@@ -76,7 +70,7 @@ def starts_with_1(wordlist: pd.DataFrame):
         return True
 
 
-def equalize_pages(first_wl: pd.DataFrame, second_wl: pd.DataFrame):
+def equalize_pages(first_wl: cst.wordlist, second_wl: cst.wordlist):
     no_of_pages = first_wl['SEITE'].unique().tolist()
     reduced_second_wl = second_wl[second_wl['SEITE'].isin(
         no_of_pages)]
@@ -133,8 +127,10 @@ def proper_doc(data_list):
     else:
         False
 
+# TODO REfactoring --> zu groß --kann man ändern?
 
-def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> doc_doc_correlation:
+
+def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> cst.doc_doc_correlation:
     for count in range(2):
         docs, docs_to_correlate, docs_count, doc_corr_count = prepare_docs_data(
             doc_range=doc_range, count=count)

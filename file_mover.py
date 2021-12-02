@@ -2,7 +2,7 @@ import os
 import shutil
 import config as cfg
 import glob
-docs = str
+import cust_types as cst
 
 
 def move_files(MOVE_FROM_DIRECTORY, MOVE_TO_DIRECTORY):
