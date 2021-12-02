@@ -68,38 +68,52 @@ def get_partner_list(correlation_dir: str, tangro_modul):
     partner_list = [get_partner_from_filename(f) for f in all_partner_files]
     return partner_list
 
-# TODO der der obersete Block ist vll zu unnötig --> Refactoring + Optimization
+
+def get_unique_doc_list(correlation_file: pd.DataFrame) -> cst.docs_list:
+    unique_doc_list = correlation_file['DOC1']
+    unique_doc_list = unique_doc_list.append(correlation_file['DOC2'])
+    unique_doc_list = unique_doc_list.unique()
+    return unique_doc_list
+
+
+def get_unique_attachments(correlation_file: pd.DataFrame):
+    filtered_file = correlation_file[(correlation_file['DOC1'] == doc) | (
+        correlation_file['DOC2'] == doc)]
+    unique_attachments_1 = filtered_file[filtered_file['DOC1']
+                                         == doc]['DOC1_ATTNO']
+    unique_attachments_2 = filtered_file[filtered_file['DOC2']
+                                         == doc]['DOC2_ATTNO']
+    union_unique_attachments = pd.concat(
+        [unique_attachments_1, unique_attachments_2])
+    unique_attachments = union_unique_attachments.unique()
+    return unique_attachments, filtered_file
+
+
+def determine_pass_fail_ratio(filtered_file, attachment, threshold):
+    above_threshold = get_docs_above_threshold(
+        filtered_file, attachment, threshold)
+    below_threshold = get_docs_below_threshold(
+        filtered_file, attachment, threshold)
+    if not above_threshold.empty:
+        passed_failed_ratio = len(
+            below_threshold.index)/len(above_threshold.index)
+    else:
+        passed_failed_ratio = 2
 
 
 def get_spam_by_correlation_scores(file: pd.DataFrame, threshold: np.float64, definetly_spam=[]):
     spam_list = []
     not_spam_list = []
-    unique_doc_list = file['DOC1']
-    unique_doc_list = unique_doc_list.append(file['DOC2'])
-    unique_doc_list = unique_doc_list.unique()
+    unique_doc_list = get_unique_doc_list(correlation_file=file)
     for doc in unique_doc_list:
-        filtered_file = file[(file['DOC1'] == doc) | (file['DOC2'] == doc)]
-        unique_attachments_1 = filtered_file[filtered_file['DOC1']
-                                             == doc]['DOC1_ATTNO']
-        unique_attachments_2 = filtered_file[filtered_file['DOC2']
-                                             == doc]['DOC2_ATTNO']
-        union_unique_attachments = pd.concat(
-            [unique_attachments_1, unique_attachments_2])
-        unique_attachments = union_unique_attachments.unique()
+        unique_attachments, filtered_file = get_unique_attachments(
+            correlation_file=file)
         number_of_attachments = len(unique_attachments)
         for attachment in unique_attachments:
             document = str(doc) + '_' + str(attachment)
-
             if document not in definetly_spam.tolist() or number_of_attachments == 1:
-                above_threshold = get_docs_above_threshold(
+                passed_failed_ratio = determine_pass_fail_ratio(
                     filtered_file, attachment, threshold)
-                below_threshold = get_docs_below_threshold(
-                    filtered_file, attachment, threshold)
-                if not above_threshold.empty:
-                    passed_failed_ratio = len(
-                        below_threshold.index)/len(above_threshold.index)
-                else:
-                    passed_failed_ratio = 2
                 if passed_failed_ratio < 1:
                     spam_list.append(document)
                 elif passed_failed_ratio >= 1:

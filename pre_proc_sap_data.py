@@ -95,7 +95,7 @@ def __handle_bad_lines(path_to_file, tangro_modul):
     return processed_file
 
 
-def convert_floatCol_to_strCol(file, column: str):
+def convert_floatCol_to_strCol(file: pd.DataFrame, column: str):
     dataType_Obj = file.dtypes[column]
     if dataType_Obj == np.float64 or dataType_Obj == np.int64:
         file[column] = file[column].apply(

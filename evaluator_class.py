@@ -156,7 +156,7 @@ def get_filenames_for_partner_docs(wordlist_class, partner_docs):
     return all_partner_files
 
 
-def determine_all_spam(modul, classified_dict: dict,  wordlist_class, all_docs: cst.train_dict):
+def determine_all_spam(modul, classified_dict: dict,  wordlist_class: WordList, all_docs: cst.train_dict):
     spam_list = []
     non_spam_list = []
     definetly_spam = get_spam_by_modul_specs(
