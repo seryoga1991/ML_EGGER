@@ -6,14 +6,9 @@ import os
 from math import sqrt
 import config as cfg
 import cust_types as cst
-import re
-
-
+import global_config as glb
 class CorrelationError(Exception):
     pass
-
-# ToDo : Refactorn --> Bezeichnungen der Variablen verbessern und Funks kapseln
-
 
 def aggregate_by_docno(wordlist: cst.wordlist, hot_encoded_wl: np.ndarray) -> cst.two_doc_aggregation:
     filtered_wl = wordlist.drop_duplicates(
@@ -22,11 +17,14 @@ def aggregate_by_docno(wordlist: cst.wordlist, hot_encoded_wl: np.ndarray) -> cs
     if how_many_wl == 2:
         split_at_index = filtered_wl.index[0]
         last_index = filtered_wl.index[1]
-        array = [hot_encoded_wl[i * split_at_index: (1-i)*split_at_index + i * last_index, :].toarray()
+        # es sind 2 Doks --> splitte die honencode Liste und bilde danach pro Dokument den Summationsvektor
+        split_hot_wl_at_index = [hot_encoded_wl[i * split_at_index: (1-i)*split_at_index + i * last_index, :].toarray()
                  for i in range(2)]
-        simple_aggregation = [np.sum(x, axis=0) for x in array]
+        #bilde den Summationsvektor aus der hot_encoded Wortliste  für die Worttreffer pro Dokumentennummer
+        simple_aggregation_per_doc = [np.sum(x, axis=0) for x in split_hot_wl_at_index]
+        # normalisiere die Aggregation sodass ein Wort im entstehenden Vektor auch nur als ein Treffer gezählz wird
         word_hits = [np.divide(x, x, out=np.zeros_like(
-            x), where=x != 0) for x in simple_aggregation]
+            x), where=x != 0) for x in simple_aggregation_per_doc]
         return ([docno for docno in filtered_wl['DOC_NUMBER']], word_hits)
     elif how_many_wl == 1:
         diag_entry = filtered_wl.at[filtered_wl.index[0], 'DOC_NUMBER']
@@ -36,7 +34,7 @@ def aggregate_by_docno(wordlist: cst.wordlist, hot_encoded_wl: np.ndarray) -> cs
             f'Es dürfen nur 2 Wortlisten mit einadner korreliert werden. Es wurden aber {how_many_wl} übergeben.')
 
 
-def correlate(vec: cst.two_doc_aggregation, first_attachment, second_attachment):
+def correlate(vec: cst.two_doc_aggregation, first_attachment = 0, second_attachment = 0):
     normalized_difference = np.linalg.norm(
         (vec[1][0]-vec[1][1]), 1)/len(vec[1][1])
     return [vec[0][0], vec[0][1], first_attachment, second_attachment, normalized_difference]
@@ -116,8 +114,11 @@ def correlate_error_docs(doc1, doc2, first_attachment, second_attachment):
 def correlate_proper_docs(tot_first_wl, tot_second_wl, first_attachment, second_attachment):
     concat_wl = pd.concat(
         [tot_first_wl, tot_second_wl], ignore_index=True)
-    two_doc_corr = correlate(aggregate_by_docno(
-        concat_wl, hot_encode(concat_wl)), first_attachment, second_attachment)
+    if glb.correlate_doc_method == cst.CorrelationType.hot_encode_correlation:
+        correlation_vectors = aggregate_by_docno(
+        wordlist = concat_wl, hot_encoded_wl = hot_encode(concat_wl))
+    
+    two_doc_corr = correlate( correlation_vectors, first_attachment, second_attachment)
     return two_doc_corr
 
 
@@ -127,8 +128,6 @@ def proper_doc(data_list):
     else:
         False
 
-# TODO REfactoring --> zu groß --kann man ändern?
-
 
 def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> cst.doc_doc_correlation:
     for count in range(2):
@@ -136,27 +135,27 @@ def correlate_docs(wordlist: pd.DataFrame, doc_range: pd.Series = None) -> cst.d
             doc_range=doc_range, count=count)
         if not docs.empty:
             cfg.temp_name = f'data_{cfg.name_appendix}_{doc_corr_count}_{docs_count}.csv'
-            print(cfg.temp_name)
             with open(os.path.join(cfg.temporary_save_dir, cfg.temp_name), 'a+', newline='') as temp_file:
                 file_writer = prepare_writer(temp_file)
-                for idx, i in enumerate(docs):
+                for  i in docs:
                     for j in docs_to_correlate:
-                        first_attachments, tot_first_wl = get_unique_wl_attachment(
-                            wordlist, i)
-                        second_attachments, tot_second_wl = get_unique_wl_attachment(
-                            wordlist, j)
-                        for first_attachment in first_attachments:
-                            for second_attachment in second_attachments:
+                        unique_attachment_wordlist = [get_unique_wl_attachment(wordlist = wordlist,doc_no = z) for z in [i,j]] # verschiedene Docs können noch mehreer Attachments haben --> berücksitigt diese
+                        for first_attachment in unique_attachment_wordlist[0]:
+                            for second_attachment in unique_attachment_wordlist[2]:
                                 data = prepare_data_for_correlation(
-                                    tot_first_wl, first_attachment, tot_second_wl, second_attachment)
-                                if not proper_doc(data_list=data):
+                                    unique_attachment_wordlist[1], first_attachment, unique_attachment_wordlist[3], second_attachment)
+                                
+                                if not proper_doc(data_list = data): # berücksichtige mögliche Fehler...manche Wortlisten/Dokumente fangen nicht mit Seite 1 an
                                     two_doc_corr = correlate_error_docs(
                                         i, j, first_attachment, second_attachment)
                                 else:
                                     two_doc_corr = correlate_proper_docs(
-                                        data[2], data[3], first_attachment, second_attachment)
+                                        tot_first_wl = data[2], tot_second_wl = data[3], 
+                                        first_attachment= first_attachment, second_attachment= second_attachment)
+                                
                                 file_writer.writerow([x for x in two_doc_corr])
-                                if two_doc_corr[0] == two_doc_corr[1]:
+                                # Wenn am gleichen Dokument mehrere Attachments hängen dann kann man das gerade korrelierte wegen Symmertrie weg machen
+                                if i == j: 
                                     second_attachments = second_attachments[second_attachments !=
                                                                             first_attachment]
                     docs = docs[docs != i]

@@ -22,7 +22,9 @@ doc_doc_correlation = list[tuple[tuple[docs,
                                        docs], np.float64]]
 sap_dataclass_train_dict = str
 train_dict = dict[sap_dataclass_train_dict]
-
+class parallelize_tasks (Enum): 
+    wordlist_task = 1
+    doc_series_task = 2 
 wordlist = pd.DataFrame({
     'SEITE': pd.Series(dtype='int'),
     'LINKS': pd.Series(dtype='int'),
@@ -41,3 +43,6 @@ class ClassifierMethod(Enum):
 
 class FilterMethod(Enum):
     debitor = 1
+
+class CorrelationType(Enum):
+    hot_encode_correlation = 1

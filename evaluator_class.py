@@ -14,6 +14,7 @@ from doc_classifier_methods import classify_docs
 import os
 import utils
 import pandas
+import csv
 
 
 class Evaluator:
@@ -31,6 +32,11 @@ class Evaluator:
         self.spam_list = determine_all_spam(
             modul=self.tangro_modul, classified_dict=classified_dict, wordlist_class=self.wordlist, all_docs=all_data)
 
+    def classify_spam_by_modul_specs(self):
+        self.sapdata.set_test_train_dict(ratio=0.)
+        self.spam_list = get_spam_by_modul_specs(modul=self.tangro_modul, wordlist_class=self.wordlist,sapdata_class=self.sapdata)
+    
+    
     def move(self, data_type: cst.ClassifierMethod):
         if data_type == cst.ClassifierMethod.spam:
             try:
@@ -48,16 +54,11 @@ def initialize_members(self, path_to_wordlists, path_to_sap_data, tangro_modul, 
     self.spam_list = []
 
 
-def set_multithread(series):
-
-    # ab einem Punkt ist Multithreading nicht notwendig
-    if len(series) > cfg.cores_to_use and cfg.cores_to_use > 1:
-        glb.apply_multithread = True
-    else:
-        glb.apply_multithread = False
+def set_multithread(flag = True):
+    glb.apply_multithread = flag
 
 
-def save_data(file_name: str):
+def save_temp_data(file_name: str):
     all_files = glob.glob(os.path.join(
         cfg.temporary_save_dir, "*.csv"))
     if all_files:
@@ -96,7 +97,7 @@ def calculate_series_correlation(filtered_wl: pandas.DataFrame, series):
         calc_utility.correlate_docs(filtered_wl, new_series)
 
 
-def create_evaluation_list(modul):
+def create_evaluation_list(self,modul):
     if modul == cfg.tangro_om:
         ag_counts = self.sapdata._train_dict['headers']['SOLD_TO'].value_counts(
         )
@@ -110,7 +111,7 @@ def create_evaluation_list(modul):
 
 
 def calc_corr(self):
-    eval_filter_list = create_evaluation_list(self.tangro_modul)
+    eval_filter_list = create_evaluation_list(self,self.tangro_modul)
     for eval_set in eval_filter_list:
         frame = eval_set[0]
         category = eval_set[1]
@@ -121,7 +122,7 @@ def calc_corr(self):
             set_multithread(series)
             calculate_series_correlation(filtered_wl, series)
             file_name = str(category) + '_' + str(count)
-            save_data(file_name)
+            save_temp_data(file_name)
             utils.clean_tmp_data()
 
 
@@ -174,3 +175,42 @@ def determine_all_spam(modul, classified_dict: dict,  wordlist_class: WordList, 
             spam_list.append(get_filenames_for_partner_docs(
                 wordlist_class, partner_docs))
     return flatten_list(spam_list)
+
+
+def are_docs_distinct(wordlist: pandas.DataFrame):
+    unique_ids = wordlist['DOC_NUMBER'].unique()
+    distinct = []
+    for doc in unique_ids:
+        candidates = wordlist[wordlist['DOC_NUMBER'] == doc]['FILE_NAME'].unique() 
+        if len(candidates) > 1:
+            distinct.append(False)
+    return distinct
+
+
+def get_exclusion_words(modul = glb.tangro_om):
+    if modul == cfg.tangro_om:
+        return ['confirmacion','Auftragsbestätigung','confirmación','conferma','Rechnungskorrektur','confirmation','Confirmation','Подтверждение','confirmation']
+
+def exclude_non_distinct_files(wordlist):
+    unique_ids = wordlist['DOC_NUMBER'].unique()
+    for doc in unique_ids:
+        candidates = wordlist[wordlist['DOC_NUMBER'] == doc]['FILE_NAME'].unique() 
+        if len(candidates) > 1:
+            wordlist = wordlist[wordlist['DOC_NUMBER' ] != doc ]    
+    return wordlist
+
+def _exclude_files(modul, wordlist: pandas.DataFrame):
+    unique_ids = wordlist['DOC_NUMBER'].unique()
+    exclusion_words = get_exclusion_words(modul)
+    for doc in unique_ids:
+        candidates = wordlist[wordlist['DOC_NUMBER'] == doc]['FILE_NAME'].unique() 
+        if len(candidates) > 1:
+            for i in candidates:
+                wl = wordlist[wordlist['FILE_NAME'] == i]
+                excluded = any(elem in wl['WORT'].to_list() for elem in exclusion_words)
+                if excluded:
+                    wordlist = wordlist[wordlist['FILE_NAME' ] != i ]                
+    return wordlist
+
+exclude_files = utils.Parallelize_Task(_exclude_files,cst.parallelize_tasks.wordlist_task,slice_size=100)
+

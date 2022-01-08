@@ -41,7 +41,7 @@ def filter_by_wordlist(self, wordlist: cst.wordlist):
 
 
 def intialize_data_structs(self, path_to_sap_data, tangro_modul):
-    # Member Variablen die nicht gefiltert  werden sollen, fangen mit __ an
+    # Member Variablen die nicht gefiltert  werden sollen, fangen mit _ an
     self.__tangro_preproc = cfg.tangro_preproc[tangro_modul]
     self.headers = load_sap_data(
         cfg.sd_headers, self.__tangro_preproc, path_to_sap_data)
@@ -59,6 +59,8 @@ def intialize_data_structs(self, path_to_sap_data, tangro_modul):
         cfg.sd_cuval, self.__tangro_preproc, path_to_sap_data)
     self.cuprt = load_sap_data(
         cfg.sd_cuprt, self.__tangro_preproc, path_to_sap_data)
+    self._addressdata = load_sap_data(
+        cfg.sd_addressdata, self.__tangro_preproc, path_to_sap_data)
     self._train_dict = {}
     self._test_dict = {}
 

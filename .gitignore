@@ -130,3 +130,7 @@ dmypy.json
 
 # config Datei da lokal 
 config.py
+*.csv
+test_script.py
+*.txt
+*.df

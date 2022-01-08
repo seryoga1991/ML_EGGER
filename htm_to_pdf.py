@@ -11,5 +11,5 @@ def convert_htm_to_pdf(PATH_TO_FILES,SAVE_PATH):
             try:
                 out_pdf_name = os.path.join(save_path ,file.title().rsplit('.', 1)[0] + ".pdf")
                 pdfkit.from_file(file.title(), out_pdf_name)
-            except Error:
+            except:
                 pass # gegebene Fehlerbehandlung

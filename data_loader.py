@@ -7,6 +7,8 @@ import config as cfg
 import cust_types as cst
 from pre_proc_sap_data import preproc_sap_data, additional_processing
 
+class NoData(Exception):
+    pass
 
 def load_wordlists(PATH_TO_FILES=cfg.path_to_wordlists, subset: cst.files_list = []):
     path_length = len(PATH_TO_FILES) + 1
@@ -20,16 +22,11 @@ def load_wordlists(PATH_TO_FILES=cfg.path_to_wordlists, subset: cst.files_list =
         single_file = True
     else:
         single_file = False
-
-    if not single_file:
+    try:
         total_file = read_wordlists(
-            all_files=all_files, path_length=path_length)
-    else:
-        try:
-            total_file = read_wordlists(
-                all_files=all_files, single_file=True, path_length=path_length)
-        except FileNotFoundError as e:
-            print('Datei nicht vorhanden')
+            all_files=all_files, single_file=single_file, path_length=path_length)
+    except FileNotFoundError as e:
+        print('Datei nicht vorhanden')
 
     return total_file
 
@@ -69,7 +66,7 @@ def load_sap_data(file_name, tangro_modul, path_to_data=cfg.path_to_sap_data):
     name_pattern = file_name.split('.')[0] + "*.csv"
     all_files = glob.glob(os.path.join(path_to_data, name_pattern))
     if len(all_files) == 0:
-        print("Dateien nicht vorhanden")  # Raise Error
+        raise NoData("Dateien nicht vorhanden") 
     else:
         concat_sap_file = pd.concat(
             (get_sap_data(f, tangro_modul) for f in all_files))
