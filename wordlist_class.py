@@ -72,3 +72,6 @@ def do_custom_cleaning(wordlist: pd.DataFrame):
     custom_punctuation = '!"#$%&()\'*+.;<=>?[\]^_`{|}~'
     filtered_wordlist['WORT'] = filtered_wordlist['WORT'].str.replace(rf"([{custom_punctuation}])+", '', regex=True)
     return filtered_wordlist
+
+def add_recognized_data():
+    pass
