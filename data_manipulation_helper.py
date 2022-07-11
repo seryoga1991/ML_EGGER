@@ -138,9 +138,11 @@ def get_central_word(df: pd.DataFrame, tolerance_row,tolerance_col):
 
 
 #TODO Refactorn
-def _group_wordlocks(tolerance_row = 50,tolerance_col = 60, wordlist: pd.DataFrame = pd.DataFrame()):
+def _group_wordlocks( multi_proc = True, tolerance_row = 50,tolerance_col = 60, wordlist: pd.DataFrame = pd.DataFrame() ):
+    pd.set_option('mode.chained_assignment', None)
     wordlist = wordlist.assign(WORDBLOCK_ID = lambda x: 0)
     columm_loc = wordlist.columns.get_loc('WORDBLOCK_ID') 
+    wordlist = wordlist.reset_index()
     unique_docids = wordlist['DOC_NUMBER'].unique()
     for idx,doc in enumerate(unique_docids):
         wl = wordlist[wordlist['DOC_NUMBER'] == doc]
@@ -164,14 +166,10 @@ def _group_wordlocks(tolerance_row = 50,tolerance_col = 60, wordlist: pd.DataFra
                         id = counter 
                     else:
                         id = df.iloc[0]['WORDBLOCK_ID']  
-                    wl.iloc[index[neighboring_words['WORDBLOCK_ID'] == 0].to_list(), columm_loc] = id 
+                    wordlist.iloc[index[neighboring_words['WORDBLOCK_ID'] == 0].to_list(), columm_loc] = id 
                 else:
                     end_of_wordlist = True
-        wordlist.loc[wordlist['DOC_NUMBER'] == doc,'WORDBLOCK_ID'] = wl['WORDBLOCK_ID']
-        if not glb.apply_multithread:
-            percent = (idx + 1 ) / len(unique_docids)
-            printProgressBar(percentage=percent) 
-        
+        #wordlist.loc[wordlist['DOC_NUMBER'] == doc,'WORDBLOCK_ID'] = wl['WORDBLOCK_ID']
     return wordlist['WORDBLOCK_ID'] 
             
 

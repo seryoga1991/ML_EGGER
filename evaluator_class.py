@@ -15,7 +15,7 @@ import os
 import utils
 import pandas
 import csv
-
+from tqdm import tqdm
 
 class Evaluator:
     def __init__(self, path_to_wordlists: str = cfg.path_to_wordlists, path_to_sap_data: str = cfg.path_to_sap_data, tangro_modul=cfg.tangro_om, files_subset=[]):
@@ -180,7 +180,7 @@ def determine_all_spam(modul, classified_dict: dict,  wordlist_class: WordList, 
 def are_docs_distinct(wordlist: pandas.DataFrame):
     unique_ids = wordlist['DOC_NUMBER'].unique()
     distinct = []
-    for doc in unique_ids:
+    for doc in tqdm(unique_ids):
         candidates = wordlist[wordlist['DOC_NUMBER'] == doc]['FILE_NAME'].unique() 
         if len(candidates) > 1:
             distinct.append(False)
@@ -193,13 +193,13 @@ def get_exclusion_words(modul = glb.tangro_om):
 
 def exclude_non_distinct_files(wordlist):
     unique_ids = wordlist['DOC_NUMBER'].unique()
-    for doc in unique_ids:
+    for doc in tqdm(unique_ids):
         candidates = wordlist[wordlist['DOC_NUMBER'] == doc]['FILE_NAME'].unique() 
         if len(candidates) > 1:
             wordlist = wordlist[wordlist['DOC_NUMBER' ] != doc ]    
     return wordlist
 
-def _exclude_files(modul, wordlist: pandas.DataFrame):
+def _exclude_files(modul,multi_proc, wordlist: pandas.DataFrame):
     unique_ids = wordlist['DOC_NUMBER'].unique()
     exclusion_words = get_exclusion_words(modul)
     for doc in unique_ids:

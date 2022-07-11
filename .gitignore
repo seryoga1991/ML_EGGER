@@ -134,3 +134,4 @@ config.py
 test_script.py
 *.txt
 *.df
+*.zip

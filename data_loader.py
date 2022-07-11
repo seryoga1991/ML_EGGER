@@ -62,18 +62,18 @@ def read_wordlists(all_files, single_file: bool = False, path_length=0) -> cst.w
     return total_file
 
 
-def load_sap_data(file_name, tangro_modul, path_to_data=cfg.path_to_sap_data):
+def load_sap_data(file_name, tangro_modul, path_to_data=cfg.path_to_sap_data, sep = ','):
     name_pattern = file_name.split('.')[0] + "*.csv"
     all_files = glob.glob(os.path.join(path_to_data, name_pattern))
     if len(all_files) == 0:
         raise NoData("Dateien nicht vorhanden") 
     else:
         concat_sap_file = pd.concat(
-            (get_sap_data(f, tangro_modul) for f in all_files))
+            (get_sap_data(f, tangro_modul,sep) for f in all_files))
     additional_processing(concat_sap_file)
     return concat_sap_file
 
 
-def get_sap_data(path_to_file, tangro_modul):
-    file = preproc_sap_data(path_to_file, tangro_modul)
+def get_sap_data(path_to_file, tangro_modul,sep):
+    file = preproc_sap_data(path_to_file, tangro_modul ,sep)
     return file

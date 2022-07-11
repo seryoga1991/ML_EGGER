@@ -52,10 +52,13 @@ class Parallelize_Task:
         self.func = func
         self.task_classifier = task_classifier
         self.slice_size = slice_size
+        
     
     def __call__(self, *args, **kwargs):
         pd.set_option('mode.chained_assignment', None)
-        if glb.apply_multithread:
+        multi_proc = False
+        multi_proc = kwargs.get('multi_proc')
+        if multi_proc:
             if cfg.cores_to_use in cfg.core_check:
                 if self.task_classifier == cst.parallelize_tasks.wordlist_task:
                     key_arg = 'wordlist'
